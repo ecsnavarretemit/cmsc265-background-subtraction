@@ -7,10 +7,24 @@
 import os
 import sys
 import cv2
+from multiprocessing.pool import ThreadPool
+from collections import deque
+
+# task to emulate threads
+class DummyTask:
+  def __init__(self, data):
+    self.data = data
+
+  def ready(self):
+    return True
+
+  def get(self):
+    return self.data
 
 def create_silhouette(normal_video, adjusted_video, **kwargs):
   debug = kwargs.get('debug', False)
   method = kwargs.get('method', 'absdiff')
+  multithreaded = kwargs.get('multithreaded', False)
   frame_difference = kwargs.get('frame_difference', 15)
 
   # check if the method specified is available or not
@@ -60,6 +74,11 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
   if has_initial_adjusted_frame is True:
     frame_counter = 1
 
+  # initialize thread pool
+  num_threads = cv2.getNumberOfCPUs()
+  pool = ThreadPool(processes=num_threads)
+  pending = deque()
+
   # read the file
   while normal_video.isOpened():
     # break the loop when the normal_frame equates to None
@@ -70,61 +89,82 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
     if adjusted_frame is None and frame_difference < 0 and has_initial_adjusted_frame is True:
       break
 
-    normal_fd = None
+    # process all the pending processed on the queue and show the result
+    while len(pending) > 0 and pending[0].ready():
+      combined = pending.popleft().get()
 
-    # get the frame difference for normal and previous_normal frames
-    if normal_frame is not None:
-      normal_fd = normal_fn(normal_frame, previous_normal_frame)
+      # show the combined result
+      if debug is True:
+        cv2.imshow('combined', combined)
 
-    # set the value of the combined_fd to the normal_fd as a default value
-    combined_fd = normal_fd
-
-    # if advance_frame is not `None`, get the frame difference and combine it to the
-    # frame difference of the normal frame using addWeighted function
-    if adjusted_frame is not None:
-      adjusted_fd = adjusted_fn(adjusted_frame, previous_adjusted_frame)
-
-      # combine the normal_fd and adjusted_fd if normal_frame is not `None`
-      # or else set the combined_fd to the value of the adjusted_fd
-      if normal_frame is not None:
-        combined_fd = cv2.addWeighted(normal_fd, 1, adjusted_fd, 1, 0)
+    # append tasks to the pending tasks pool, it can be performed in single-threaded or multithreaded mode
+    if len(pending) < num_threads:
+      if multithreaded is True:
+        params = (normal_frame, previous_normal_frame, normal_fn, adjusted_frame, previous_adjusted_frame, adjusted_fn)
+        task = pool.apply_async(process_frame, params)
       else:
-        combined_fd = adjusted_fd
+        process = process_frame(normal_frame, previous_normal_frame, normal_fn, adjusted_frame,
+                                previous_adjusted_frame, adjusted_fn)
+        task = DummyTask(process)
 
-    # show the combined result
-    if debug is True:
-      cv2.imshow('combined', combined_fd)
+      # append the derived task to the pending pool
+      pending.append(task)
 
+      # get the next frame and process it
+      if normal_frame is not None:
+        previous_normal_frame = normal_frame.copy()
+
+      _, normal_frame = normal_video.read()
+
+      # get the next frame of the adjusted video and store the previous
+      if adjusted_frame is not None:
+        previous_adjusted_frame = adjusted_frame.copy()
+
+      if has_initial_adjusted_frame is True:
+        _, adjusted_frame = adjusted_video.read()
+
+      # begin reading the adjusted frame after normalizing the start point
+      # for frame_difference that is set to negative value
+      if (frame_counter + adjusted_frame_start_point) >= 0 and has_initial_adjusted_frame is False:
+        _, adjusted_frame = adjusted_video.read()
+        previous_adjusted_frame = adjusted_frame
+
+        has_initial_adjusted_frame = True
+
+      # increment the frame counter
+      frame_counter += 1
+
+      # quit the process when q is pressed
       if cv2.waitKey(1) & 0xFF == ord('q'):
         print("Shutdown requested. Cleaning up resources.")
         break
 
-    # get the next frame and process it
-    if normal_frame is not None:
-      previous_normal_frame = normal_frame.copy()
-
-    _, normal_frame = normal_video.read()
-
-    # get the next frame of the adjusted video and store the previous
-    if adjusted_frame is not None:
-      previous_adjusted_frame = adjusted_frame.copy()
-
-    if has_initial_adjusted_frame is True:
-      _, adjusted_frame = adjusted_video.read()
-
-    # begin reading the adjusted frame after normalizing the start point
-    # for frame_difference that is set to negative value
-    if (frame_counter + adjusted_frame_start_point) >= 0 and has_initial_adjusted_frame is False:
-      _, adjusted_frame = adjusted_video.read()
-      previous_adjusted_frame = adjusted_frame
-
-      has_initial_adjusted_frame = True
-
-    # increment the frame counter
-    frame_counter += 1
-
   # remove existing windows not yet closed
   cv2.destroyAllWindows()
+
+def process_frame(normal_frame, previous_normal_frame, normal_fn, adjusted_frame, previous_adjusted_frame, adjusted_fn):
+  normal_fd = None
+
+  # get the frame difference for normal and previous_normal frames
+  if normal_frame is not None:
+    normal_fd = normal_fn(normal_frame, previous_normal_frame)
+
+  # set the value of the combined_fd to the normal_fd as a default value
+  combined_fd = normal_fd
+
+  # if advance_frame is not `None`, get the frame difference and combine it to the
+  # frame difference of the normal frame using addWeighted function
+  if adjusted_frame is not None:
+    adjusted_fd = adjusted_fn(adjusted_frame, previous_adjusted_frame)
+
+    # combine the normal_fd and adjusted_fd if normal_frame is not `None`
+    # or else set the combined_fd to the value of the adjusted_fd
+    if normal_frame is not None:
+      combined_fd = cv2.addWeighted(normal_fd, 1, adjusted_fd, 1, 0)
+    else:
+      combined_fd = adjusted_fd
+
+  return combined_fd
 
 def frame_difference_absdiff(current_frame, previous_frame):
   # convert the current and previous frames to grayscale
