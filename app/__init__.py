@@ -28,8 +28,9 @@ def create_silhouette(video_file, **kwargs):
   normal_video = cv2.VideoCapture(video_file)
 
   # read the video again but once every n-1 frames in advance since the CAP_PROP_POS_FRAMES uses 0-based index
+  adjusted_frame_start_point = frame_difference - 1
   adjusted_video = cv2.VideoCapture(video_file)
-  adjusted_video.set(cv2.CAP_PROP_POS_FRAMES, (frame_difference - 1))
+  adjusted_video.set(cv2.CAP_PROP_POS_FRAMES, adjusted_frame_start_point)
 
   # get the first frames of the normal_video
   _, normal_frame = normal_video.read()
