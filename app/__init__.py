@@ -65,29 +65,45 @@ def create_silhouette(video_file, **kwargs):
   # read the file
   while normal_video.isOpened():
     # break the loop when the normal_frame equates to None
-    if normal_frame is None:
+    if normal_frame is None and frame_difference >= 0:
       break
 
-    # get the frame difference for normal and previous_normal frames
-    normal_fd = normal_fn(normal_frame, previous_normal_frame)
+    # break the loop when the provided frame difference is less than 0 and the adjusted frame contains `None` value
+    if adjusted_frame is None and frame_difference < 0 and has_initial_adjusted_frame is True:
+      break
 
-    combined = normal_fd
+    normal_fd = None
+
+    # get the frame difference for normal and previous_normal frames
+    if normal_frame is not None:
+      normal_fd = normal_fn(normal_frame, previous_normal_frame)
+
+    # set the value of the combined_fd to the normal_fd as a default value
+    combined_fd = normal_fd
 
     # if advance_frame is not `None`, get the frame difference and combine it to the
     # frame difference of the normal frame using addWeighted function
     if adjusted_frame is not None:
       adjusted_fd = adjusted_fn(adjusted_frame, previous_adjusted_frame)
-      combined = cv2.addWeighted(normal_fd, 1, adjusted_fd, 1, 0)
+
+      # combine the normal_fd and adjusted_fd if normal_frame is not `None`
+      # or else set the combined_fd to the value of the adjusted_fd
+      if normal_frame is not None:
+        combined_fd = cv2.addWeighted(normal_fd, 1, adjusted_fd, 1, 0)
+      else:
+        combined_fd = adjusted_fd
 
     # show the combined result
     if debug is True:
-      cv2.imshow('combined', combined)
+      cv2.imshow('combined', combined_fd)
 
       if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
     # get the next frame and process it
-    previous_normal_frame = normal_frame.copy()
+    if normal_frame is not None:
+      previous_normal_frame = normal_frame.copy()
+
     _, normal_frame = normal_video.read()
 
     # get the next frame of the adjusted video and store the previous
