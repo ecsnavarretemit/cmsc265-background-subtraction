@@ -10,6 +10,9 @@ import cv2
 from multiprocessing.pool import ThreadPool
 from collections import deque
 
+# list of available background subtraction methods
+SUBTRACTION_METHODS = ['absdiff', 'mog', 'mog2', 'knn']
+
 # task to emulate threads
 class DummyTask:
   def __init__(self, data):
@@ -28,9 +31,8 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
   frame_difference = kwargs.get('frame_difference', 15)
 
   # check if the method specified is available or not
-  methods = ['absdiff', 'mog', 'mog2', 'knn']
-  if method not in methods:
-    print("Method %s not available. Available methods: %s" % (method, ",".join(methods)))
+  if method not in SUBTRACTION_METHODS:
+    print(f"Method \"{method}\" not available. Available methods: {','.join(SUBTRACTION_METHODS)}")
     sys.exit(1)
 
   # compute the adjusted_frame_start_point
