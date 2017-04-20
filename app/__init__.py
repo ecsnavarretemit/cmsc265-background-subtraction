@@ -36,10 +36,17 @@ def create_silhouette(video_file, **kwargs):
   _, normal_frame = normal_video.read()
   previous_normal_frame = normal_frame
 
+  adjusted_frame = None
+  previous_adjusted_frame = None
+  has_initial_adjusted_frame = False
+
   # get the first frames of the adjusted_video but this time query the current frame of the normal
-  # video plus the n - 1 frames to get the future silhouette
-  _, adjusted_frame = adjusted_video.read(normal_frame)
-  previous_adjusted_frame = adjusted_frame
+  # video plus the n - 1 frames to get the future silhouette when starting point is greater than 0
+  if adjusted_frame_start_point >= 0:
+    _, adjusted_frame = adjusted_video.read(normal_frame)
+    previous_adjusted_frame = adjusted_frame
+
+    has_initial_adjusted_frame = True
 
   # set default frame difference function
   normal_fn = frame_difference_absdiff
@@ -49,6 +56,11 @@ def create_silhouette(video_file, **kwargs):
   if method == 'mog':
     normal_fn = frame_difference_mog()
     adjusted_fn = frame_difference_mog()
+
+  # initial value for countint frames
+  frame_counter = 0
+  if has_initial_adjusted_frame is True:
+    frame_counter = 1
 
   # read the file
   while normal_video.isOpened():
@@ -82,7 +94,19 @@ def create_silhouette(video_file, **kwargs):
     if adjusted_frame is not None:
       previous_adjusted_frame = adjusted_frame.copy()
 
-    _, adjusted_frame = adjusted_video.read()
+    if has_initial_adjusted_frame is True:
+      _, adjusted_frame = adjusted_video.read()
+
+    # begin reading the adjusted frame after normalizing the start point
+    # for frame_difference that is set to negative value
+    if (frame_counter + adjusted_frame_start_point) >= 0 and has_initial_adjusted_frame is False:
+      _, adjusted_frame = adjusted_video.read()
+      previous_adjusted_frame = adjusted_frame
+
+      has_initial_adjusted_frame = True
+
+    # increment the frame counter
+    frame_counter += 1
 
 def frame_difference_absdiff(current_frame, previous_frame):
   # convert the current and previous frames to grayscale
