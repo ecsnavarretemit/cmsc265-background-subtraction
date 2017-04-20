@@ -14,7 +14,7 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
   frame_difference = kwargs.get('frame_difference', 15)
 
   # check if the method specified is available or not
-  methods = ['absdiff', 'mog']
+  methods = ['absdiff', 'mog', 'mog2']
   if method not in methods:
     print("Method %s not available. Available methods: %s" % (method, ",".join(methods)))
     sys.exit(1)
@@ -48,6 +48,9 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
   if method == 'mog':
     normal_fn = frame_difference_mog()
     adjusted_fn = frame_difference_mog()
+  elif method == 'mog2':
+    normal_fn = frame_difference_mog2()
+    adjusted_fn = frame_difference_mog2()
 
   # initial value for countint frames
   frame_counter = 0
@@ -131,6 +134,17 @@ def frame_difference_absdiff(current_frame, previous_frame):
 def frame_difference_mog():
   # create instance for background subtraction using MOG (Mixture of Gaussian)
   subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+
+  def apply_subtraction(current_frame, _):
+    # apply the background subtractor to the frame and return it
+    return subtractor.apply(current_frame)
+
+  # return the inner function for usage
+  return apply_subtraction
+
+def frame_difference_mog2():
+  # create instance for background subtraction using MOG2 (Mixture of Gaussian)
+  subtractor = cv2.createBackgroundSubtractorMOG2()
 
   def apply_subtraction(current_frame, _):
     # apply the background subtractor to the frame and return it
