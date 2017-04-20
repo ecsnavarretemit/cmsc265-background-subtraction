@@ -81,4 +81,62 @@ def create_silhouette_absdiff(video_file, **kwargs):
   advanced_video.release()
   cv2.destroyAllWindows()
 
+def create_silhouette_mog(video_file, **kwargs):
+  debug = kwargs.get('debug', False)
+  frame_difference = kwargs.get('frame_difference', 15)
+
+  if not os.path.exists(video_file):
+    print("Path to video file does not exist: %s" % video_file)
+    sys.exit(1)
+
+  # read the video
+  normal_video = cv2.VideoCapture(video_file)
+
+  # get the first frames of the normal_video
+  _, normal_frame = normal_video.read()
+
+  # read the video again but once every n-1 frames in advance since the CAP_PROP_POS_FRAMES uses 0-based index
+  advanced_video = cv2.VideoCapture(video_file)
+  advanced_video.set(cv2.CAP_PROP_POS_FRAMES, (frame_difference - 1))
+
+  # get the first frames of the advanced_video but this time query the current frame of the normal
+  # video plus the n - 1 frames to get the future silhouette
+  _, advanced_frame = advanced_video.read(normal_frame)
+
+  # create instance for background subtraction using MOG (Mixture of Gaussian)
+  normal_bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+  advanced_bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+
+  while normal_video.isOpened():
+    # apply the background subtractor to the normal and advanced frames
+    normal_subtracted = normal_bg_subtractor.apply(normal_frame)
+    advanced_subtracted = advanced_bg_subtractor.apply(advanced_frame)
+
+    # set the value of the combine frames to the bg subtracted of the normal frame
+    combined = normal_subtracted
+
+    # combine the advanced and normal frames using addWeighted function
+    if advanced_subtracted is not None:
+      combined = cv2.addWeighted(normal_subtracted, 1, advanced_subtracted, 1, 0)
+
+    # if there is no frames that can be rendered break the loop
+    if combined is None:
+      break
+
+    # show the combined result
+    if debug is True:
+      cv2.imshow('combined', combined)
+
+      if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+    # retrieve the next frames to be processed
+    _, normal_frame = normal_video.read()
+    _, advanced_frame = advanced_video.read()
+
+  # release all the resources used
+  normal_video.release()
+  advanced_video.release()
+  cv2.destroyAllWindows()
+
 
