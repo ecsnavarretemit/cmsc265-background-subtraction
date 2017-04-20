@@ -28,26 +28,26 @@ def create_silhouette(video_file, **kwargs):
   normal_video = cv2.VideoCapture(video_file)
 
   # read the video again but once every n-1 frames in advance since the CAP_PROP_POS_FRAMES uses 0-based index
-  advanced_video = cv2.VideoCapture(video_file)
-  advanced_video.set(cv2.CAP_PROP_POS_FRAMES, (frame_difference - 1))
+  adjusted_video = cv2.VideoCapture(video_file)
+  adjusted_video.set(cv2.CAP_PROP_POS_FRAMES, (frame_difference - 1))
 
   # get the first frames of the normal_video
   _, normal_frame = normal_video.read()
   previous_normal_frame = normal_frame
 
-  # get the first frames of the advanced_video but this time query the current frame of the normal
+  # get the first frames of the adjusted_video but this time query the current frame of the normal
   # video plus the n - 1 frames to get the future silhouette
-  _, advanced_frame = advanced_video.read(normal_frame)
-  previous_advanced_frame = advanced_frame
+  _, adjusted_frame = adjusted_video.read(normal_frame)
+  previous_adjusted_frame = adjusted_frame
 
   # set default frame difference function
   normal_fn = frame_difference_absdiff
-  advanced_fn = frame_difference_absdiff
+  adjusted_fn = frame_difference_absdiff
 
-  # swap the frame differencing function for the previous and advanced
+  # swap the frame differencing function for the normal and adjusted
   if method == 'mog':
     normal_fn = frame_difference_mog()
-    advanced_fn = frame_difference_mog()
+    adjusted_fn = frame_difference_mog()
 
   # read the file
   while normal_video.isOpened():
@@ -62,9 +62,9 @@ def create_silhouette(video_file, **kwargs):
 
     # if advance_frame is not `None`, get the frame difference and combine it to the
     # frame difference of the normal frame using addWeighted function
-    if advanced_frame is not None:
-      advanced_fd = advanced_fn(advanced_frame, previous_advanced_frame)
-      combined = cv2.addWeighted(normal_fd, 1, advanced_fd, 1, 0)
+    if adjusted_frame is not None:
+      adjusted_fd = adjusted_fn(adjusted_frame, previous_adjusted_frame)
+      combined = cv2.addWeighted(normal_fd, 1, adjusted_fd, 1, 0)
 
     # show the combined result
     if debug is True:
@@ -77,11 +77,11 @@ def create_silhouette(video_file, **kwargs):
     previous_normal_frame = normal_frame.copy()
     _, normal_frame = normal_video.read()
 
-    # get the next frame of the advanced video and store the previous
-    if advanced_frame is not None:
-      previous_advanced_frame = advanced_frame.copy()
+    # get the next frame of the adjusted video and store the previous
+    if adjusted_frame is not None:
+      previous_adjusted_frame = adjusted_frame.copy()
 
-    _, advanced_frame = advanced_video.read()
+    _, adjusted_frame = adjusted_video.read()
 
 def frame_difference_absdiff(current_frame, previous_frame):
   # convert the current and previous frames to grayscale
