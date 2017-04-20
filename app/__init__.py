@@ -37,7 +37,7 @@ def create_silhouette(video_file, **kwargs):
 
   # get the first frames of the advanced_video but this time query the current frame of the normal
   # video plus the n - 1 frames to get the future silhouette
-  _, advanced_frame = normal_video.read(normal_frame)
+  _, advanced_frame = advanced_video.read(normal_frame)
   previous_advanced_frame = advanced_frame
 
   # set default frame difference function
