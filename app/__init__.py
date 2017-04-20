@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # __init__.py
 #
 # Copyright(c) Exequiel Ceasar Navarrete <esnavarrete1@up.edu.ph>
