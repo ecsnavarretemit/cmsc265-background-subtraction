@@ -10,55 +10,61 @@ import os
 import sys
 import cv2
 
-def create_silhouette_absdiff(video_file, **kwargs):
+def create_silhouette(video_file, **kwargs):
   debug = kwargs.get('debug', False)
+  method = kwargs.get('method', 'absdiff')
   frame_difference = kwargs.get('frame_difference', 15)
 
+  # show error when the file does not exist
   if not os.path.exists(video_file):
     print("Path to video file does not exist: %s" % video_file)
+    sys.exit(1)
+
+  # check if the method specified is available or not
+  methods = ['absdiff', 'mog']
+  if method not in methods:
+    print("Method %s not available. Available methods: %s" % (method, ",".join(methods)))
     sys.exit(1)
 
   # read the video
   normal_video = cv2.VideoCapture(video_file)
 
-  # get the first frames of the normal_video
-  _, current_frame1 = normal_video.read()
-  previous_frame1 = current_frame1
-
   # read the video again but once every n-1 frames in advance since the CAP_PROP_POS_FRAMES uses 0-based index
   advanced_video = cv2.VideoCapture(video_file)
   advanced_video.set(cv2.CAP_PROP_POS_FRAMES, (frame_difference - 1))
 
+  # get the first frames of the normal_video
+  _, normal_frame = normal_video.read()
+  previous_normal_frame = normal_frame
+
   # get the first frames of the advanced_video but this time query the current frame of the normal
   # video plus the n - 1 frames to get the future silhouette
-  _, current_frame2 = normal_video.read(current_frame1)
-  previous_frame2 = current_frame2
+  _, advanced_frame = normal_video.read(normal_frame)
+  previous_advanced_frame = advanced_frame
+
+  # set default frame difference function
+  fn = frame_difference_absdiff
+
+  if method == 'mog':
+    print("Not yet implemented")
+    sys.exit(1)
 
   # read the file
   while normal_video.isOpened():
-    # break the loop when the frame of the present equates to None
-    if current_frame1 is None:
+    # break the loop when the normal_frame equates to None
+    if normal_frame is None:
       break
 
-    # convert the current and previous frames to grayscale
-    current_frame1_gray = cv2.cvtColor(current_frame1, cv2.COLOR_BGR2GRAY)
-    previous_frame1_gray = cv2.cvtColor(previous_frame1, cv2.COLOR_BGR2GRAY)
+    # get the frame difference for normal and previous_normal frames
+    normal_fd = fn(normal_frame, previous_normal_frame)
 
-    # get the difference of the previous and the current frames to get the moving objects
-    frame_diff1 = cv2.absdiff(current_frame1_gray, previous_frame1_gray)
+    combined = normal_fd
 
-    # set the value of combined to true as the default value
-    combined = frame_diff1
-
-    # perform the grayscale conversion and frame difference to the advanced video
-    # the combine them using the addWeighted function to make them
-    if current_frame2 is not None:
-      current_frame2_gray = cv2.cvtColor(current_frame2, cv2.COLOR_BGR2GRAY)
-      previous_frame2_gray = cv2.cvtColor(previous_frame2, cv2.COLOR_BGR2GRAY)
-
-      frame_diff2 = cv2.absdiff(current_frame2_gray, previous_frame2_gray)
-
-      combined = cv2.addWeighted(frame_diff1, 1, frame_diff2, 1, 0)
+    # if advance_frame is not `None`, get the frame difference and combine it to the
+    # frame difference of the normal frame using addWeighted function
+    if advanced_frame is not None:
+      advanced_fd = fn(advanced_frame, previous_advanced_frame)
+      combined = cv2.addWeighted(normal_fd, 1, advanced_fd, 1, 0)
 
     # show the combined result
     if debug is True:
@@ -68,18 +74,22 @@ def create_silhouette_absdiff(video_file, **kwargs):
         break
 
     # get the next frame and process it
-    previous_frame1 = current_frame1.copy()
-    _, current_frame1 = normal_video.read()
+    previous_normal_frame = normal_frame.copy()
+    _, normal_frame = normal_video.read()
 
-    # get the next frame of the advanced video
-    if current_frame2 is not None:
-      previous_frame2 = current_frame2.copy()
-      _, current_frame2 = advanced_video.read()
+    # get the next frame of the advanced video and store the previous
+    if advanced_frame is not None:
+      previous_advanced_frame = advanced_frame.copy()
 
-  # release all the resources used
-  normal_video.release()
-  advanced_video.release()
-  cv2.destroyAllWindows()
+    _, advanced_frame = advanced_video.read()
+
+def frame_difference_absdiff(current_frame, previous_frame):
+  # convert the current and previous frames to grayscale
+  current_frame_gray = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
+  previous_frame_gray = cv2.cvtColor(previous_frame, cv2.COLOR_BGR2GRAY)
+
+  # get the difference of the previous and the current frames to get the moving objects
+  return cv2.absdiff(current_frame_gray, previous_frame_gray)
 
 def create_silhouette_mog(video_file, **kwargs):
   debug = kwargs.get('debug', False)
