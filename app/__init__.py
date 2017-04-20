@@ -125,6 +125,11 @@ def create_silhouette(video_file, **kwargs):
     # increment the frame counter
     frame_counter += 1
 
+  # perform cleanup for the resources
+  normal_video.release()
+  adjusted_video.release()
+  cv2.destroyAllWindows()
+
 def frame_difference_absdiff(current_frame, previous_frame):
   # convert the current and previous frames to grayscale
   current_frame_gray = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
