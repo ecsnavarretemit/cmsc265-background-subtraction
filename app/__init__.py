@@ -8,15 +8,10 @@ import os
 import sys
 import cv2
 
-def create_silhouette(video_file, **kwargs):
+def create_silhouette(normal_video, adjusted_video, **kwargs):
   debug = kwargs.get('debug', False)
   method = kwargs.get('method', 'absdiff')
   frame_difference = kwargs.get('frame_difference', 15)
-
-  # show error when the file does not exist
-  if not os.path.exists(video_file):
-    print("Path to video file does not exist: %s" % video_file)
-    sys.exit(1)
 
   # check if the method specified is available or not
   methods = ['absdiff', 'mog']
@@ -24,12 +19,8 @@ def create_silhouette(video_file, **kwargs):
     print("Method %s not available. Available methods: %s" % (method, ",".join(methods)))
     sys.exit(1)
 
-  # read the video
-  normal_video = cv2.VideoCapture(video_file)
-
-  # read the video again but once every n-1 frames in advance since the CAP_PROP_POS_FRAMES uses 0-based index
+  # compute the adjusted_frame_start_point
   adjusted_frame_start_point = frame_difference - 1
-  adjusted_video = cv2.VideoCapture(video_file)
 
   # get the first frames of the normal_video
   _, normal_frame = normal_video.read()
@@ -99,6 +90,7 @@ def create_silhouette(video_file, **kwargs):
       cv2.imshow('combined', combined_fd)
 
       if cv2.waitKey(1) & 0xFF == ord('q'):
+        print("Shutdown requested. Cleaning up resources.")
         break
 
     # get the next frame and process it
@@ -125,9 +117,7 @@ def create_silhouette(video_file, **kwargs):
     # increment the frame counter
     frame_counter += 1
 
-  # perform cleanup for the resources
-  normal_video.release()
-  adjusted_video.release()
+  # remove existing windows not yet closed
   cv2.destroyAllWindows()
 
 def frame_difference_absdiff(current_frame, previous_frame):
