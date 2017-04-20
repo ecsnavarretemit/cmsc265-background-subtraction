@@ -28,60 +28,102 @@ def create_silhouette(video_file, **kwargs):
   normal_video = cv2.VideoCapture(video_file)
 
   # read the video again but once every n-1 frames in advance since the CAP_PROP_POS_FRAMES uses 0-based index
-  advanced_video = cv2.VideoCapture(video_file)
-  advanced_video.set(cv2.CAP_PROP_POS_FRAMES, (frame_difference - 1))
+  adjusted_frame_start_point = frame_difference - 1
+  adjusted_video = cv2.VideoCapture(video_file)
 
   # get the first frames of the normal_video
   _, normal_frame = normal_video.read()
   previous_normal_frame = normal_frame
 
-  # get the first frames of the advanced_video but this time query the current frame of the normal
-  # video plus the n - 1 frames to get the future silhouette
-  _, advanced_frame = advanced_video.read(normal_frame)
-  previous_advanced_frame = advanced_frame
+  adjusted_frame = None
+  previous_adjusted_frame = None
+  has_initial_adjusted_frame = False
+
+  # get the first frames of the adjusted_video but this time query the current frame of the normal
+  # video plus the n - 1 frames to get the future silhouette when starting point is greater than 0
+  if adjusted_frame_start_point >= 0:
+    adjusted_video.set(cv2.CAP_PROP_POS_FRAMES, adjusted_frame_start_point)
+
+    _, adjusted_frame = adjusted_video.read(normal_frame)
+    previous_adjusted_frame = adjusted_frame
+
+    has_initial_adjusted_frame = True
 
   # set default frame difference function
   normal_fn = frame_difference_absdiff
-  advanced_fn = frame_difference_absdiff
+  adjusted_fn = frame_difference_absdiff
 
-  # swap the frame differencing function for the previous and advanced
+  # swap the frame differencing function for the normal and adjusted
   if method == 'mog':
     normal_fn = frame_difference_mog()
-    advanced_fn = frame_difference_mog()
+    adjusted_fn = frame_difference_mog()
+
+  # initial value for countint frames
+  frame_counter = 0
+  if has_initial_adjusted_frame is True:
+    frame_counter = 1
 
   # read the file
   while normal_video.isOpened():
     # break the loop when the normal_frame equates to None
-    if normal_frame is None:
+    if normal_frame is None and frame_difference >= 0:
       break
 
-    # get the frame difference for normal and previous_normal frames
-    normal_fd = normal_fn(normal_frame, previous_normal_frame)
+    # break the loop when the provided frame difference is less than 0 and the adjusted frame contains `None` value
+    if adjusted_frame is None and frame_difference < 0 and has_initial_adjusted_frame is True:
+      break
 
-    combined = normal_fd
+    normal_fd = None
+
+    # get the frame difference for normal and previous_normal frames
+    if normal_frame is not None:
+      normal_fd = normal_fn(normal_frame, previous_normal_frame)
+
+    # set the value of the combined_fd to the normal_fd as a default value
+    combined_fd = normal_fd
 
     # if advance_frame is not `None`, get the frame difference and combine it to the
     # frame difference of the normal frame using addWeighted function
-    if advanced_frame is not None:
-      advanced_fd = advanced_fn(advanced_frame, previous_advanced_frame)
-      combined = cv2.addWeighted(normal_fd, 1, advanced_fd, 1, 0)
+    if adjusted_frame is not None:
+      adjusted_fd = adjusted_fn(adjusted_frame, previous_adjusted_frame)
+
+      # combine the normal_fd and adjusted_fd if normal_frame is not `None`
+      # or else set the combined_fd to the value of the adjusted_fd
+      if normal_frame is not None:
+        combined_fd = cv2.addWeighted(normal_fd, 1, adjusted_fd, 1, 0)
+      else:
+        combined_fd = adjusted_fd
 
     # show the combined result
     if debug is True:
-      cv2.imshow('combined', combined)
+      cv2.imshow('combined', combined_fd)
 
       if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
     # get the next frame and process it
-    previous_normal_frame = normal_frame.copy()
+    if normal_frame is not None:
+      previous_normal_frame = normal_frame.copy()
+
     _, normal_frame = normal_video.read()
 
-    # get the next frame of the advanced video and store the previous
-    if advanced_frame is not None:
-      previous_advanced_frame = advanced_frame.copy()
+    # get the next frame of the adjusted video and store the previous
+    if adjusted_frame is not None:
+      previous_adjusted_frame = adjusted_frame.copy()
 
-    _, advanced_frame = advanced_video.read()
+    if has_initial_adjusted_frame is True:
+      _, adjusted_frame = adjusted_video.read()
+
+    # begin reading the adjusted frame after normalizing the start point
+    # for frame_difference that is set to negative value
+    if (frame_counter + adjusted_frame_start_point) >= 0 and has_initial_adjusted_frame is False:
+      _, adjusted_frame = adjusted_video.read()
+      previous_adjusted_frame = adjusted_frame
+
+      has_initial_adjusted_frame = True
+
+    # increment the frame counter
+    frame_counter += 1
 
 def frame_difference_absdiff(current_frame, previous_frame):
   # convert the current and previous frames to grayscale
