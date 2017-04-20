@@ -18,9 +18,9 @@ normal_video = cv2.VideoCapture(video_file)
 _, current_frame1 = normal_video.read()
 previous_frame1 = current_frame1
 
-# read the video again but once every 14 frames in advance
+# read the video again but once every n-1 frames in advance since the CAP_PROP_POS_FRAMES uses 0-based index
 advanced_video = cv2.VideoCapture(video_file)
-advanced_video.set(cv2.CAP_PROP_POS_FRAMES, D_FRAME)
+advanced_video.set(cv2.CAP_PROP_POS_FRAMES, (D_FRAME - 1))
 
 _, current_frame2 = normal_video.read(current_frame1)
 previous_frame2 = current_frame2
