@@ -7,9 +7,9 @@
 # Version 1.0.0-alpha1
 
 import os
-from app import create_silhouette_absdiff
+from app import create_silhouette
 
 video_file = os.path.join(os.getcwd(), "assets/videos/small-video.mp4")
-create_silhouette_absdiff(video_file, frame_difference=60, debug=True)
+create_silhouette(video_file, frame_difference=15, debug=True)
 
 
