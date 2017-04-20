@@ -10,6 +10,7 @@ import os
 import cv2
 
 video_file = os.path.join(os.getcwd(), "assets/videos/small-video.mp4")
+D_FRAME = 15
 
 # read the video
 normal_video = cv2.VideoCapture(video_file)
@@ -19,7 +20,7 @@ previous_frame1 = current_frame1
 
 # read the video again but once every 14 frames in advance
 advanced_video = cv2.VideoCapture(video_file)
-advanced_video.set(cv2.CAP_PROP_POS_FRAMES, 14)
+advanced_video.set(cv2.CAP_PROP_POS_FRAMES, D_FRAME)
 
 _, current_frame2 = normal_video.read(current_frame1)
 previous_frame2 = current_frame2
