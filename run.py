@@ -13,6 +13,14 @@ import click
 import traceback
 from app import create_silhouette, SUBTRACTION_METHODS
 
+# show version
+def print_version(ctx, param, value):
+  if not value or ctx.resilient_parsing:
+    return
+
+  click.echo('Version 1.0.0-alpha1')
+  ctx.exit()
+
 @click.command()
 @click.argument('video', type=click.Path(exists=True))
 @click.option('--frame-difference', default=15,
@@ -20,10 +28,14 @@ from app import create_silhouette, SUBTRACTION_METHODS
 @click.option('--method', type=click.Choice(SUBTRACTION_METHODS), default="mog",
               help='The method that will be used in removing background.')
 @click.option('--multithreaded', default=False, is_flag=True,
-              help='Enables multithreading to improve processing and rendering performance.')
+              help="""
+              Enables multithreading to improve processing and rendering performance. This is dependent on how much logical CPUs you have on your computer.
+              """)
 @click.option('--show-video/--no-show-video', default=True,
               help='Shows video in a window.')
-@click.option('--save-to-file', type=click.Path(writable=True), help='Path where the output file should be saved')
+@click.option('--save-to-file', type=click.Path(writable=True), help='Path where the output file should be saved.')
+@click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
+              help='Show the version of the program.')
 def main(video, frame_difference, method, multithreaded, show_video, save_to_file):
   try:
     # read the video twice
