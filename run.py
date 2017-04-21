@@ -63,8 +63,18 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
         # create the video writer
         video_writer = cv2.VideoWriter(save_to_file, fourcc, 20.0, (int(width), int(height)), False)
 
+    # disable multithreading if the number of logical CPUs is less than 2
+    num_threads = cv2.getNumberOfCPUs()
+    if num_threads < 2 and multithreaded is True:
+      multithreaded = False
+
+      thread_message = "Cannot run in multithreaded mode. Reverting to single-threaded mode since the "
+      thread_message += "number of logical CPUs is less than 2."
+
+      click.echo(thread_message)
+
     # show notice about performance when running single-threaded mode on methods other than absdiff
-    if multithreaded is False and method != 'absdiff':
+    if multithreaded is False and method != 'absdiff' and num_threads >= 2:
       thread_message = f"Running on single-threaded mode using \"{method}\". If you are experiencing some jank/lag, "
       thread_message += "re-run the program with --multithreaded flag present."
 
