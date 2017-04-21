@@ -8,6 +8,7 @@ import os
 import cv2
 from multiprocessing.pool import ThreadPool
 from collections import deque
+from app.fps import clock, StatValue
 
 # list of available background subtraction methods
 SUBTRACTION_METHODS = ['absdiff', 'mog', 'mog2', 'knn']
@@ -22,6 +23,12 @@ class DummyTask:
 
   def get(self):
     return self.data
+
+def draw_str(dst, target, s):
+  x, y = target
+
+  cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+  cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
 def create_silhouette(normal_video, adjusted_video, **kwargs):
   debug = kwargs.get('debug', False)
@@ -82,6 +89,10 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
   pool = ThreadPool(processes=num_threads)
   pending = deque()
 
+  latency = StatValue()
+  frame_interval = StatValue()
+  last_frame_time = clock()
+
   # read the file
   while normal_video.isOpened():
     # break the loop when the normal_frame equates to None
@@ -94,7 +105,7 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
 
     # process all the pending processed on the queue and show the result
     while len(pending) > 0 and pending[0].ready():
-      combined = pending.popleft().get()
+      combined, t = pending.popleft().get()
 
       # write to the file
       if video_writer is not None:
@@ -102,16 +113,25 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
 
       # show the combined result
       if debug is True:
+        latency.update(clock() - t)
+        draw_str(combined, (20, 20), "threaded      :  " + str(multithreaded))
+        draw_str(combined, (20, 40), "latency        :  %.1f ms" % (latency.value*1000))
+        draw_str(combined, (20, 60), "frame interval :  %.1f ms" % (frame_interval.value*1000))
+
         cv2.imshow('combined', combined)
 
     # append tasks to the pending tasks pool, it can be performed in single-threaded or multithreaded mode
     if len(pending) < num_threads:
+      t = clock()
+      frame_interval.update(t - last_frame_time)
+      last_frame_time = t
+
       if multithreaded is True:
-        params = (normal_frame, previous_normal_frame, normal_fn, adjusted_frame, previous_adjusted_frame, adjusted_fn)
+        params = (normal_frame, previous_normal_frame, normal_fn, adjusted_frame, previous_adjusted_frame, adjusted_fn, t)
         task = pool.apply_async(process_frame, params)
       else:
         process = process_frame(normal_frame, previous_normal_frame, normal_fn, adjusted_frame,
-                                previous_adjusted_frame, adjusted_fn)
+                                previous_adjusted_frame, adjusted_fn, t)
         task = DummyTask(process)
 
       # append the derived task to the pending pool
@@ -152,7 +172,7 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
 
   return return_value
 
-def process_frame(normal_frame, previous_normal_frame, normal_fn, adjusted_frame, previous_adjusted_frame, adjusted_fn):
+def process_frame(normal_frame, previous_normal_frame, normal_fn, adjusted_frame, previous_adjusted_frame, adjusted_fn, t):
   normal_fd = None
 
   # get the frame difference for normal and previous_normal frames
@@ -174,7 +194,7 @@ def process_frame(normal_frame, previous_normal_frame, normal_fn, adjusted_frame
     else:
       combined_fd = adjusted_fd
 
-  return combined_fd
+  return combined_fd, t
 
 def frame_difference_absdiff(current_frame, previous_frame):
   # convert the current and previous frames to grayscale
