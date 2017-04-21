@@ -86,7 +86,7 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
       click.echo(thread_message)
 
     intro_message = "To quit: press 'ctrl + c' when focused on the command line."
-    intro_message += "When focused on the video window press, 'q'."
+    intro_message += " When focused on the video window press, 'q'."
 
     # show message on how to quit
     click.echo(intro_message)
