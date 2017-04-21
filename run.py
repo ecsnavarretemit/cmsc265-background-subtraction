@@ -21,7 +21,7 @@ from app import create_silhouette, SUBTRACTION_METHODS
               help='The method that will be used in removing background.')
 @click.option('--multithreaded', default=False, is_flag=True,
               help='Enables multithreading to improve processing and rendering performance.')
-@click.option('--show-video', default=True,
+@click.option('--show-video/--no-show-video', default=True,
               help='Shows video in a window.')
 def main(video, frame_difference, method, multithreaded, show_video):
   try:
