@@ -34,13 +34,18 @@ def print_version(ctx, param, value):
 @click.option('--show-video/--no-show-video', default=True,
               help='Shows video in a window.')
 @click.option('--save-to-file', type=click.Path(writable=True), help='Path where the output file should be saved.')
+@click.option('--disable-silhouette', default=False, is_flag=True, help="Disable silhouette generation.")
 @click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
               help='Show the version of the program.')
-def main(video, frame_difference, method, multithreaded, show_video, save_to_file):
+def main(video, frame_difference, method, multithreaded, show_video, save_to_file, disable_silhouette):
   try:
     # read the video twice
     normal_video = cv2.VideoCapture(video)
-    adjusted_video = cv2.VideoCapture(video)
+    adjusted_video = None
+
+    # video again if the silhouette generation is enabled
+    if disable_silhouette is False:
+      adjusted_video = cv2.VideoCapture(video)
 
     video_writer = None
     if save_to_file is not None and isinstance(save_to_file, str):
@@ -92,7 +97,8 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
                       method=method,
                       multithreaded=multithreaded,
                       debug=show_video,
-                      video_writer=video_writer)
+                      video_writer=video_writer,
+                      no_silhouette=disable_silhouette)
 
     # show message to the user
     if video_writer is not None and result is True:
@@ -116,7 +122,8 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
 
   # release the resources used
   normal_video.release()
-  adjusted_video.release()
+  if adjusted_video is not None:
+    adjusted_video.release()
 
   # release the output file writer
   if video_writer is not None:

@@ -29,6 +29,7 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
   multithreaded = kwargs.get('multithreaded', False)
   frame_difference = kwargs.get('frame_difference', 15)
   video_writer = kwargs.get('video_writer', None)
+  no_silhouette = kwargs.get('no_silhouette', False)
 
   # check if the method specified is available or not
   if method not in SUBTRACTION_METHODS:
@@ -49,7 +50,7 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
 
   # get the first frames of the adjusted_video but this time query the current frame of the normal
   # video plus the n - 1 frames to get the future silhouette when starting point is greater than 0
-  if adjusted_frame_start_point >= 0:
+  if adjusted_frame_start_point >= 0 and no_silhouette is False:
     adjusted_video.set(cv2.CAP_PROP_POS_FRAMES, adjusted_frame_start_point)
 
     _, adjusted_frame = adjusted_video.read(normal_frame)
@@ -123,20 +124,21 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
 
       _, normal_frame = normal_video.read()
 
-      # get the next frame of the adjusted video and store the previous
-      if adjusted_frame is not None:
-        previous_adjusted_frame = adjusted_frame.copy()
+      if no_silhouette is False:
+        # get the next frame of the adjusted video and store the previous
+        if adjusted_frame is not None:
+          previous_adjusted_frame = adjusted_frame.copy()
 
-      if has_initial_adjusted_frame is True:
-        _, adjusted_frame = adjusted_video.read()
+        if has_initial_adjusted_frame is True:
+          _, adjusted_frame = adjusted_video.read()
 
-      # begin reading the adjusted frame after normalizing the start point
-      # for frame_difference that is set to negative value
-      if (frame_counter + adjusted_frame_start_point) >= 0 and has_initial_adjusted_frame is False:
-        _, adjusted_frame = adjusted_video.read()
-        previous_adjusted_frame = adjusted_frame
+        # begin reading the adjusted frame after normalizing the start point
+        # for frame_difference that is set to negative value
+        if (frame_counter + adjusted_frame_start_point) >= 0 and has_initial_adjusted_frame is False:
+          _, adjusted_frame = adjusted_video.read()
+          previous_adjusted_frame = adjusted_frame
 
-        has_initial_adjusted_frame = True
+          has_initial_adjusted_frame = True
 
       # increment the frame counter
       frame_counter += 1
