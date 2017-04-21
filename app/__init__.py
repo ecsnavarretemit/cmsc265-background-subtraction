@@ -29,11 +29,14 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
   method = kwargs.get('method', 'absdiff')
   multithreaded = kwargs.get('multithreaded', False)
   frame_difference = kwargs.get('frame_difference', 15)
+  video_writer = kwargs.get('video_writer', None)
 
   # check if the method specified is available or not
   if method not in SUBTRACTION_METHODS:
     print(f"Method \"{method}\" not available. Available methods: {','.join(SUBTRACTION_METHODS)}")
     sys.exit(1)
+
+  return_value = True
 
   # compute the adjusted_frame_start_point
   adjusted_frame_start_point = frame_difference - 1
@@ -95,6 +98,10 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
     while len(pending) > 0 and pending[0].ready():
       combined = pending.popleft().get()
 
+      # write to the file
+      if video_writer is not None:
+        video_writer.write(combined)
+
       # show the combined result
       if debug is True:
         cv2.imshow('combined', combined)
@@ -139,10 +146,13 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
       # quit the process when q is pressed
       if cv2.waitKey(1) & 0xFF == ord('q'):
         print("Shutdown requested. Cleaning up resources.")
+        return_value = False
         break
 
   # remove existing windows not yet closed
   cv2.destroyAllWindows()
+
+  return return_value
 
 def process_frame(normal_frame, previous_normal_frame, normal_fn, adjusted_frame, previous_adjusted_frame, adjusted_fn):
   normal_fd = None
