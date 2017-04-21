@@ -5,7 +5,6 @@
 # Version 1.0.0-alpha1
 
 import os
-import sys
 import cv2
 from multiprocessing.pool import ThreadPool
 from collections import deque
@@ -33,8 +32,7 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
 
   # check if the method specified is available or not
   if method not in SUBTRACTION_METHODS:
-    print(f"Method \"{method}\" not available. Available methods: {','.join(SUBTRACTION_METHODS)}")
-    sys.exit(1)
+    raise ValueError(f"Method \"{method}\" not available. Available methods: {', '.join(SUBTRACTION_METHODS)}")
 
   return_value = True
 
