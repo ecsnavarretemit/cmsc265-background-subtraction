@@ -14,7 +14,7 @@ import traceback
 from app import create_silhouette, SUBTRACTION_METHODS
 
 # show version
-def print_version(ctx, param, value):
+def print_version(ctx, param, value): # pylint: disable=W0613
   if not value or ctx.resilient_parsing:
     return
 
@@ -37,7 +37,7 @@ def print_version(ctx, param, value):
 @click.option('--disable-silhouette', default=False, is_flag=True, help="Disable silhouette generation.")
 @click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
               help='Show the version of the program.')
-def main(video, frame_difference, method, multithreaded, show_video, save_to_file, disable_silhouette):
+def main(video, frame_difference, method, multithreaded, show_video, save_to_file, disable_silhouette): # pylint: disable=R0915
   try:
     # read the video twice
     normal_video = cv2.VideoCapture(video)
@@ -93,12 +93,12 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
 
     # create silhouette of the video
     result = create_silhouette(normal_video, adjusted_video,
-                      frame_difference=frame_difference,
-                      method=method,
-                      multithreaded=multithreaded,
-                      debug=show_video,
-                      video_writer=video_writer,
-                      no_silhouette=disable_silhouette)
+                               frame_difference=frame_difference,
+                               method=method,
+                               multithreaded=multithreaded,
+                               debug=show_video,
+                               video_writer=video_writer,
+                               no_silhouette=disable_silhouette)
 
     # show message to the user
     if video_writer is not None and result is True:
@@ -113,7 +113,7 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
     # delete the output file
     if video_writer is not None:
       os.remove(save_to_file)
-  except (Exception, ValueError):
+  except (Exception, ValueError): # pylint: disable=W0703
     traceback.print_exc(file=sys.stdout)
 
     # delete the output file
@@ -134,6 +134,6 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
 
 # execute the main function
 if __name__ == "__main__":
-  main()
+  main() # pylint: disable=E1120
 
 

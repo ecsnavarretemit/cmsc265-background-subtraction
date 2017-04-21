@@ -23,7 +23,7 @@ class DummyTask:
   def get(self):
     return self.data
 
-def create_silhouette(normal_video, adjusted_video, **kwargs):
+def create_silhouette(normal_video, adjusted_video, **kwargs): # pylint: disable=R0914, R0915
   debug = kwargs.get('debug', False)
   method = kwargs.get('method', 'absdiff')
   multithreaded = kwargs.get('multithreaded', False)
@@ -94,7 +94,7 @@ def create_silhouette(normal_video, adjusted_video, **kwargs):
       break
 
     # process all the pending processed on the queue and show the result
-    while len(pending) > 0 and pending[0].ready():
+    while len(pending) > 0 and pending[0].ready(): # pylint: disable=C1801
       combined = pending.popleft().get()
 
       # write to the file
