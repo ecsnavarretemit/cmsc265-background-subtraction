@@ -35,9 +35,13 @@ def print_version(ctx, param, value): # pylint: disable=W0613
               help='Shows video in a window.')
 @click.option('--save-to-file', type=click.Path(writable=True), help='Path where the output file should be saved.')
 @click.option('--disable-silhouette', default=False, is_flag=True, help="Disable silhouette generation.")
+@click.option('--bg-learning-rate', default=None, type=click.FLOAT,
+              help="Background Subtraction Algorithm learning rate.")
+@click.option('--bg-history', default=None, type=click.INT, help="Background Subtraction Algorithm length of history.")
 @click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
               help='Show the version of the program.')
-def main(video, frame_difference, method, multithreaded, show_video, save_to_file, disable_silhouette): # pylint: disable=R0915
+def main(video, frame_difference, method, multithreaded, show_video, save_to_file,
+         disable_silhouette, bg_learning_rate, bg_history): # pylint: disable=R0915
   try:
     # read the video twice
     normal_video = cv2.VideoCapture(video)
@@ -98,7 +102,9 @@ def main(video, frame_difference, method, multithreaded, show_video, save_to_fil
                                multithreaded=multithreaded,
                                debug=show_video,
                                video_writer=video_writer,
-                               no_silhouette=disable_silhouette)
+                               no_silhouette=disable_silhouette,
+                               bg_segm_history=bg_history,
+                               bg_segm_lr=bg_learning_rate)
 
     # show message to the user
     if video_writer is not None and result is True:

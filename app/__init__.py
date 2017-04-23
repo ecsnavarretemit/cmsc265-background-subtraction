@@ -30,6 +30,8 @@ def create_silhouette(normal_video, adjusted_video, **kwargs): # pylint: disable
   frame_difference = kwargs.get('frame_difference', 15)
   video_writer = kwargs.get('video_writer', None)
   no_silhouette = kwargs.get('no_silhouette', False)
+  bg_segm_history = kwargs.get('bg_segm_history', None)
+  bg_segm_lr = kwargs.get('bg_segm_lr', None)
 
   # check if the method specified is available or not
   if method not in SUBTRACTION_METHODS:
@@ -64,14 +66,14 @@ def create_silhouette(normal_video, adjusted_video, **kwargs): # pylint: disable
 
   # swap the frame differencing function for the normal and adjusted
   if method == 'mog':
-    normal_fn = frame_difference_mog()
-    adjusted_fn = frame_difference_mog()
+    normal_fn = frame_difference_mog(learning_rate=bg_segm_lr, history=bg_segm_history)
+    adjusted_fn = frame_difference_mog(learning_rate=bg_segm_lr, history=bg_segm_history)
   elif method == 'mog2':
-    normal_fn = frame_difference_mog2()
-    adjusted_fn = frame_difference_mog2()
+    normal_fn = frame_difference_mog2(learning_rate=bg_segm_lr, history=bg_segm_history)
+    adjusted_fn = frame_difference_mog2(learning_rate=bg_segm_lr, history=bg_segm_history)
   elif method == 'knn':
-    normal_fn = frame_difference_knn()
-    adjusted_fn = frame_difference_knn()
+    normal_fn = frame_difference_knn(learning_rate=bg_segm_lr, history=bg_segm_history)
+    adjusted_fn = frame_difference_knn(learning_rate=bg_segm_lr, history=bg_segm_history)
 
   # initial value for countint frames
   frame_counter = 0
@@ -186,35 +188,81 @@ def frame_difference_absdiff(current_frame, previous_frame):
   # get the difference of the previous and the current frames to get the moving objects
   return cv2.absdiff(current_frame_gray, previous_frame_gray)
 
-def frame_difference_mog():
+def frame_difference_mog(learning_rate=None, history=None):
+  default_learning_rate = 0
+  default_history = 200
+
+  # override the learning rate value if `None` is provided
+  if learning_rate is None:
+    learning_rate = default_learning_rate
+
+  if history is None:
+    history = default_history
+
   # create instance for background subtraction using MOG (Mixture of Gaussian)
-  subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+  subtractor = cv2.bgsegm.createBackgroundSubtractorMOG(history=history)
 
+  # learning rate is set to 0 and makes the subtractor not able to learn
+  # any changes or background model not updated at all.
+  # see formula below:
+  #
+  # https://github.com/opencv/opencv_contrib/blob/master/modules/bgsegm/src/bgfg_gaussmix.cpp#L453
+  # learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( nframes, history );
   def apply_subtraction(current_frame, _):
     # apply the background subtractor to the frame and return it
-    return subtractor.apply(current_frame)
+    return subtractor.apply(current_frame, learningRate=learning_rate)
 
   # return the inner function for usage
   return apply_subtraction
 
-def frame_difference_mog2():
+def frame_difference_mog2(learning_rate=None, history=None):
+  default_learning_rate = -1
+  default_history = 500
+
+  # override the learning rate value if `None` is provided
+  if learning_rate is None:
+    learning_rate = default_learning_rate
+
+  if history is None:
+    history = default_history
+
   # create instance for background subtraction using MOG2 (Mixture of Gaussian)
-  subtractor = cv2.createBackgroundSubtractorMOG2()
+  subtractor = cv2.createBackgroundSubtractorMOG2(history=history, detectShadows=False)
 
+  # learning rate is set to -1 and gives us dynamic learning rate based on the number of frames and history.
+  # see formula below:
+  #
+  # https://github.com/opencv/opencv/blob/master/modules/video/src/bgfg_gaussmix2.cpp#L774
+  # learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
   def apply_subtraction(current_frame, _):
     # apply the background subtractor to the frame and return it
-    return subtractor.apply(current_frame)
+    return subtractor.apply(current_frame, learningRate=learning_rate)
 
   # return the inner function for usage
   return apply_subtraction
 
-def frame_difference_knn():
-  # create instance for background subtraction using KNN (K-Nearest Neighbors)
-  subtractor = cv2.createBackgroundSubtractorKNN()
+def frame_difference_knn(learning_rate=None, history=None):
+  default_learning_rate = -1
+  default_history = 500
 
+  # override the learning rate value if `None` is provided
+  if learning_rate is None:
+    learning_rate = default_learning_rate
+
+  if history is None:
+    history = default_history
+
+  # create instance for background subtraction using KNN (K-Nearest Neighbors)
+  subtractor = cv2.createBackgroundSubtractorKNN(history=history, detectShadows=False)
+
+  # learning rate is set to -1 and gives us dynamic learning rate based on the number of frames and history.
+  # see formula below:
+  #
+  # https://github.com/opencv/opencv/blob/master/modules/video/src/bgfg_KNN.cpp#L576
+  # learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
   def apply_subtraction(current_frame, _):
     # apply the background subtractor to the frame and return it
-    return subtractor.apply(current_frame)
+    return subtractor.apply(current_frame, learningRate=learning_rate)
 
   # return the inner function for usage
   return apply_subtraction
