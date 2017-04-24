@@ -2,10 +2,12 @@
 
 ## Requirements
 
-1. Python 3.6.x
+1. Python 3.6.x or later
 2. OpenCV 3.x
+3. FFmpeg 3.x
 
 _Note: Make sure that Python is compiled with framework enabled when installing on macOS systems._
+_Note: FFmpeg is required for outputting video files and preventing errors regarding video processing._
 
 ## Installing dependencies
 
@@ -28,11 +30,10 @@ Follow these steps to install the setup the application:
 
     2. `<python version>`: is the version under your `venv` virtual environment folder
 
-5. Create the folder `assets/img` inside the root of the project directory and place the input images inside the newly created folder.
-
 ## Running the Program
 
-You can run the python scripts by invoking `python run.py ` or `./run.py`.
+You can run the python scripts by invoking `python run.py <path_to_video_file>` or `./run.py <path_to_video_file>`.
+For more information, run `python run.py --help` or `./run.py --help`.
 
 ## License
 
