@@ -4,7 +4,7 @@
 #
 # Copyright(c) Exequiel Ceasar Navarrete <esnavarrete1@up.edu.ph>
 # Licensed under MIT
-# Version 1.0.0-alpha1
+# Version 1.0.0
 
 import os
 import sys
@@ -18,7 +18,7 @@ def print_version(ctx, param, value): # pylint: disable=W0613
   if not value or ctx.resilient_parsing:
     return
 
-  click.echo('Version 1.0.0-alpha1')
+  click.echo('Version 1.0.0')
   ctx.exit()
 
 @click.command()
