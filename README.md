@@ -30,8 +30,6 @@ Follow these steps to install the setup the application:
 
     2. `<python version>`: is the version under your `venv` virtual environment folder
 
-5. Create the folder `assets/img` inside the root of the project directory and place the input images inside the newly created folder.
-
 ## Running the Program
 
 You can run the python scripts by invoking `python run.py <path_to_video_file>` or `./run.py <path_to_video_file>`.
